@@ -47,4 +47,4 @@ Posisi Start disimpan pada file `gwo.js` pada class `GreyWolf` & Ubah value `sta
 
 ## Output / Hasil
 
-<img src="https://i.ibb.co.com/kXgQLgd/image.png" width="720px" alt="result">
+<img src="https://i.ibb.co.com/R9GGCJr/image.png" width="720px" alt="result">
