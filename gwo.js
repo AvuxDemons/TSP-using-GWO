@@ -1,4 +1,5 @@
 import { performanceFunction } from './fitness.js';
+import { coordinates } from './fitness.js';
 
 class GreyWolf {
     constructor(nDimensi, objFunction) {
@@ -15,16 +16,13 @@ class GreyWolf {
     }
 
     inisialisasiPosisi(min, max) {
-        // Generate a list of cities
         const cities = Array.from({ length: max - min + 1 }, (_, index) => index + min);
 
-        // Shuffle the list of cities
         for (let i = cities.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [cities[i], cities[j]] = [cities[j], cities[i]];
         }
 
-        // Assign the shuffled cities to the position
         this.position = cities.slice(0, this.nDimensi);
     }
 
@@ -34,17 +32,24 @@ class GreyWolf {
     }
 
     updatePosition() {
-        let visitedCities = [this.position[0]]; // Kota yang sudah dikunjungi
+        const cities = Object.keys(coordinates);
+        let visitedCities = [this.position[0]];
+        let startCity = "Surabaya";
+
+        if (this.position[0] !== cities.indexOf(startCity)) {
+            this.position = [cities.indexOf(startCity), ...this.position.filter(city => city !== cities.indexOf(startCity))];
+        }
+
         for (let i = 1; i < this.nDimensi; i++) {
-            // Pastikan kota yang baru tidak terduplikasi
             let newPosition = Math.floor(Math.random() * this.nDimensi);
             while (visitedCities.includes(newPosition)) {
-                newPosition = Math.floor(Math.random() * this.nDimensi); // Pilih kota baru
+                newPosition = Math.floor(Math.random() * this.nDimensi);
             }
             this.position[i] = newPosition;
-            visitedCities.push(newPosition); // Tandai kota yang sudah dikunjungi
+            visitedCities.push(newPosition);
         }
     }
+
 
     updateAlphaBetaDelta() {
         if (this.fitness > this.alphaFitness) {

@@ -128,7 +128,7 @@
 
             function iterate() {
                 let iteration = 0;
-                const maxIterations = 20;
+                const maxIterations = 50;
                 const a = 2;
 
                 const interval = setInterval(() => {
@@ -162,7 +162,7 @@
                     previousPath = L.polyline(pathCoordinates, { color: 'red', weight: 4 }).addTo(map);
 
                     iteration++;
-                }, 500);
+                }, 300);
             }
 
             // Start the iteration when the button is clicked
