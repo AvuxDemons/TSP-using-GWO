@@ -9,12 +9,12 @@
         <script src="/public/chart.js"></script>
         <!-- Add Leaflet CSS & JS -->
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="/public/leaflet.js"></script>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     </head>
 
     <body class="bg-gray-100 text-gray-900">
-        <div class="container mx-auto py-8">
-            <h1 class="text-2xl font-bold mb-4">Traveling Salesman Problem with Grey Wolf Optimizer</h1>
+        <div class="container mx-auto py-8 flex flex-col gap-4">
+            <h1 class="text-2xl font-bold">Traveling Salesman Problem with Grey Wolf Optimizer</h1>
 
             <!-- Table for City Data -->
             <table class="min-w-full bg-white border border-gray-200 mb-8">
@@ -28,26 +28,60 @@
                 <tbody id="table-body"></tbody>
             </table>
 
-            <!-- Iteration Button -->
-            <button id="iterateButton"
-                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-8">
-                Start Iteration
-            </button>
+            <div class="flex flex-row gap-2 items-center justify-center">
+                <!-- Wolf Count -->
+                <label for="wolfCount" class="block text-lg font-semibold mb-2">Number of Wolves:</label>
+                <input id="wolfCount" type="number" value="4" min="2" max="20"
+                    class="bg-white border border-gray-300 py-2 px-4 rounded" />
+
+                <!-- Iteration Limit -->
+                <label for="maxIterations" class="block text-lg font-semibold mb-2">Maximum Iterations:</label>
+                <input id="maxIterations" type="number" value="20" min="1"
+                    class="bg-white border border-gray-300 py-2 px-4 rounded" />
+
+                <!-- Add a dropdown for selecting the starting city -->
+                <label for="startCity" class="block text-lg font-semibold mb-2">Select Start City:</label>
+                <select id="startCity" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded">
+                    <!-- Dynamically populate this with city names -->
+                </select>
+
+                <!-- Iteration Button -->
+                <button id="iterateButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Start Iteration
+                </button>
+            </div>
 
             <!-- Fitness Chart -->
-            <canvas id="fitnessChart" width="400" height="200"></canvas>
+            <canvas id="fitnessChart" width="400px" height="120"></canvas>
+
+            <!-- Scatter Plot -->
+            <canvas id="scatterChart" width="400px" height="120"></canvas>
 
             <!-- Best Position and Fitness -->
             <div class="mt-8">
-                <h2 class="text-xl font-bold mb-4">Best Position</h2>
-                <p id="bestPosition" class="text-lg mb-4">Best position will be displayed here.</p>
+                <h2 class="text-xl font-bold">Best Position</h2>
+                <p id="bestPosition" class="text-lg">Best position will be displayed here.</p>
                 <p id="bestFitness" class="text-lg">Best fitness will be displayed here.</p>
+            </div>
+
+            <div class="mt-8">
+                <h2 class="text-xl font-bold">Alpha Position</h2>
+                <p id="alphaPosition" class="text-lg">Alpha position will be displayed here.</p>
+                <p id="alphaFitness" class="text-lg">Alpha fitness will be displayed here.</p>
+                <br>
+                <h2 class="text-xl font-bold">Beta Position</h2>
+                <p id="betaPosition" class="text-lg">Beta position will be displayed here.</p>
+                <p id="betaFitness" class="text-lg">Beta fitness will be displayed here.</p>
+                <br>
+                <h2 class="text-xl font-bold">Delta Position</h2>
+                <p id="deltaPosition" class="text-lg">Delta position will be displayed here.</p>
+                <p id="deltaFitness" class="text-lg">Delta fitness will be displayed here.</p>
             </div>
 
             <!-- Best Route -->
             <div class="mt-8">
-                <h2 class="text-xl font-bold mb-4">Best Route</h2>
-                <p id="bestRoute" class="text-lg mb-4">Best route will be displayed here.</p>
+                <h2 class="text-xl font-bold">Best Route</h2>
+                <p id="bestRoute" class="text-lg">Best route will be displayed here.</p>
             </div>
 
             <!-- Map Container for Leaflet -->
@@ -56,18 +90,24 @@
 
         <script type="module">
             import { GWO } from './gwo.js';
-            import { coordinates } from './fitness.js';
+            import { coordinates, performanceFunction } from './fitness.js';
 
             const cities = Object.keys(coordinates);
 
             const tableBody = document.getElementById('table-body');
-            // Display cities in table
+            const startCitySelect = document.getElementById('startCity');
+            // Display cities in table and populate dropdown for starting city
             cities.forEach(city => {
                 const row = document.createElement('tr');
                 row.innerHTML = `<td class="py-2 px-4 border-b">${city}</td>
-                         <td class="py-2 px-4 border-b">${coordinates[city].x}</td>
-                         <td class="py-2 px-4 border-b">${coordinates[city].y}</td>`;
+                             <td class="py-2 px-4 border-b">${coordinates[city].x}</td>
+                             <td class="py-2 px-4 border-b">${coordinates[city].y}</td>`;
                 tableBody.appendChild(row);
+
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                startCitySelect.appendChild(option);
             });
 
             // Initialize the chart
@@ -77,7 +117,7 @@
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Fitness Over Iterations',
+                        label: 'Best Fitness',
                         data: [],
                         borderColor: 'rgba(75, 192, 192, 1)',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -103,14 +143,44 @@
                 }
             });
 
-            // Initialize the GWO algorithm
-            const gwo = new GWO(5, cities.length);
-
-            function updateChart(iteration, fitnessValue) {
-                chart.data.labels.push(iteration);
-                chart.data.datasets[0].data.push(fitnessValue);
-                chart.update();
-            }
+            // Initialize the scatter chart for fitness
+            const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+            const scatterChart = new Chart(scatterCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Alpha',
+                            data: [],
+                            backgroundColor: 'rgba(255, 99, 132, 1)',
+                            radius: 5,
+                        },
+                        {
+                            label: 'Beta',
+                            data: [],
+                            backgroundColor: 'rgba(54, 162, 235, 1)',
+                            radius: 5,
+                        },
+                        {
+                            label: 'Delta',
+                            data: [],
+                            backgroundColor: 'rgba(75, 192, 192, 1)',
+                            radius: 5,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Fitness'
+                            }
+                        }
+                    },
+                }
+            });
 
             // Initialize the Leaflet map
             const map = L.map('map').setView([coordinates["Surabaya"].x, coordinates["Surabaya"].y], 9);
@@ -126,25 +196,61 @@
             // Function to run GWO and update UI
             let previousPath = null; // Variable to store the previous polyline
 
+            // Inside the iterate function, update the scatter chart with fitness data
             function iterate() {
-                let iteration = 0;
-                const maxIterations = 50;
-                const a = 2;
+                const wolfCount = parseInt(document.getElementById('wolfCount').value);
+                const maxIterations = parseInt(document.getElementById('maxIterations').value);
+                const startCity = startCitySelect.value;
+                const startCityIndex = cities.indexOf(startCity);
 
+                const gwo = new GWO(wolfCount, cities.length, maxIterations, startCityIndex, performanceFunction);
+                gwo.initialize();
+
+                let iteration = 0;
                 const interval = setInterval(() => {
                     if (iteration >= maxIterations) {
                         clearInterval(interval);
                         return;
                     }
 
-                    gwo.mainGWO(a - iteration * (a / maxIterations));
+                    gwo.updateAlphaBetaDelta();
+                    gwo.optimize(iteration);
 
                     // Update the chart with the current fitness
-                    updateChart(iteration + 1, gwo.alphaFitness);
+                    chart.data.labels.push(iteration);
+                    chart.data.datasets[0].data.push(gwo.alphaFitness);
+                    chart.update();
+
+                    // Update the scatter chart with fitness values
+                    scatterChart.data.datasets[0].data = [{
+                        x: iteration,
+                        y: gwo.alphaFitness
+                    }];
+                    scatterChart.data.datasets[1].data = [{
+                        x: iteration,
+                        y: gwo.betaFitness
+                    }];
+                    scatterChart.data.datasets[2].data = [{
+                        x: iteration,
+                        y: gwo.deltaFitness
+                    }];
+                    scatterChart.update();
 
                     // Update Best Position and Fitness
                     document.getElementById('bestPosition').innerText = `Best Position: ${gwo.alphaPosition}`;
                     document.getElementById('bestFitness').innerText = `Best Fitness: ${gwo.alphaFitness.toFixed(2)}`;
+
+                    // Update Alpha Position and Fitness
+                    document.getElementById('alphaPosition').innerText = `Alpha Position: ${gwo.alphaPosition}`;
+                    document.getElementById('alphaFitness').innerText = `Alpha Fitness: ${gwo.alphaFitness.toFixed(2)}`;
+
+                    // Update Beta Position and Fitness
+                    document.getElementById('betaPosition').innerText = `Beta Position: ${gwo.betaPosition}`;
+                    document.getElementById('betaFitness').innerText = `Beta Fitness: ${gwo.betaFitness.toFixed(2)}`;
+
+                    // Update Delta Position and Fitness
+                    document.getElementById('deltaPosition').innerText = `Delta Position: ${gwo.deltaPosition}`;
+                    document.getElementById('deltaFitness').innerText = `Delta Fitness: ${gwo.deltaFitness.toFixed(2)}`;
 
                     // Generate the best route
                     let route = gwo.alphaPosition.map(index => cities[index]).join(' -> ');
@@ -159,7 +265,11 @@
                     }
 
                     // Add new path
-                    previousPath = L.polyline(pathCoordinates, { color: 'red', weight: 4 }).addTo(map);
+                    previousPath = L.polyline(pathCoordinates, {
+                        color: 'red',
+                        weight: 4,
+                        opacity: 1
+                    }).addTo(map);
 
                     iteration++;
                 }, 300);

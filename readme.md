@@ -38,13 +38,3 @@ Pada proyek ini, koordinat lokasi / kota diatur dalam format dua dimensi (x, y) 
 Koordinat disimpan pada file `fitness.js`
 
 <img src="https://i.ibb.co.com/zrm7bFZ/code.png" width="720px" alt="coordinate" />
-
-### Atur Lokasi Start Awal
-
-Posisi Start disimpan pada file `gwo.js` pada class `GreyWolf` & Ubah value `startCity`
-
-<img src="https://i.ibb.co.com/Q6SFwkT/code.png" width="720px" alt="start">
-
-## Output / Hasil
-
-<img src="https://i.ibb.co.com/R9GGCJr/image.png" width="720px" alt="result">

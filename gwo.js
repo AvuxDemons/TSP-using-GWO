@@ -1,148 +1,126 @@
-import { performanceFunction } from './fitness.js';
-import { coordinates } from './fitness.js';
-
-class GreyWolf {
-    constructor(nDimensi, objFunction) {
-        this.objFunction = objFunction;
-        this.nDimensi = nDimensi;
-        this.position = Array(nDimensi).fill(0);
-        this.velocity = Array(nDimensi).fill(0);
-        this.alphaPosition = Array(nDimensi).fill(0);
-        this.alphaFitness = -Infinity;
-        this.betaPosition = Array(nDimensi).fill(0);
-        this.betaFitness = -Infinity;
-        this.deltaPosition = Array(nDimensi).fill(0);
-        this.deltaFitness = -Infinity;
+export class GWO {
+    constructor(populationSize, numCities, maxIterations, startCityIndex, fitnessFunction) {
+        this.populationSize = populationSize;
+        this.numCities = numCities;
+        this.maxIterations = maxIterations;
+        this.startCityIndex = startCityIndex;
+        this.fitnessFunction = fitnessFunction;
+        this.alphaPosition = [];
+        this.alphaFitness = Infinity;
+        this.betaPosition = [];
+        this.betaFitness = Infinity;
+        this.deltaPosition = [];
+        this.deltaFitness = Infinity;
+        this.positions = [];
+        this.fitness = [];
     }
 
-    inisialisasiPosisi(min, max) {
-        const cities = Array.from({ length: max - min + 1 }, (_, index) => index + min);
+    initialize() {
+        this.positions = [];
+        this.fitness = [];
 
-        for (let i = cities.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [cities[i], cities[j]] = [cities[j], cities[i]];
-        }
+        // Create population with non-repeating cities
+        for (let i = 0; i < this.populationSize; i++) {
+            let position = [this.startCityIndex]; // Ensure the start city is the first city in the position
+            let availableCities = [...Array(this.numCities).keys()].filter(city => city !== this.startCityIndex); // Exclude the start city
 
-        this.position = cities.slice(0, this.nDimensi);
-    }
-
-    calculateFitness() {
-        this.fitness = this.objFunction(...this.position);
-        console.log(`Posisi: ${this.position}, Fitness: ${this.fitness}`);
-    }
-
-    updatePosition() {
-        const cities = Object.keys(coordinates);
-        let visitedCities = [this.position[0]];
-        let startCity = "Surabaya";
-
-        if (this.position[0] !== cities.indexOf(startCity)) {
-            this.position = [cities.indexOf(startCity), ...this.position.filter(city => city !== cities.indexOf(startCity))];
-        }
-
-        for (let i = 1; i < this.nDimensi; i++) {
-            let newPosition = Math.floor(Math.random() * this.nDimensi);
-            while (visitedCities.includes(newPosition)) {
-                newPosition = Math.floor(Math.random() * this.nDimensi);
+            // Select cities randomly without repetition, but exclude the start city
+            for (let j = 0; j < this.numCities - 1; j++) {
+                const randomIndex = Math.floor(Math.random() * availableCities.length);
+                const selectedCity = availableCities.splice(randomIndex, 1)[0]; // Remove selected city from the list
+                position.push(selectedCity);
             }
-            this.position[i] = newPosition;
-            visitedCities.push(newPosition);
+
+            this.positions.push(position);
+            this.fitness.push(this.fitnessFunction(position));
         }
-    }
-
-
-    updateAlphaBetaDelta() {
-        if (this.fitness > this.alphaFitness) {
-            this.deltaFitness = this.betaFitness;
-            this.deltaPosition = [...this.betaPosition];
-            this.betaFitness = this.alphaFitness;
-            this.betaPosition = [...this.alphaPosition];
-            this.alphaFitness = this.fitness;
-            this.alphaPosition = [...this.position];
-        } else if (this.fitness > this.betaFitness) {
-            this.deltaFitness = this.betaFitness;
-            this.deltaPosition = [...this.betaPosition];
-            this.betaFitness = this.fitness;
-            this.betaPosition = [...this.position];
-        } else if (this.fitness > this.deltaFitness) {
-            this.deltaFitness = this.fitness;
-            this.deltaPosition = [...this.position];
-        }
-    }
-
-    updateVelocity(a) {
-        for (let i = 0; i < this.nDimensi; i++) {
-            const A1 = 2 * a * Math.random() - a;
-            const C1 = 2 * Math.random();
-            const Dalpha = Math.abs(C1 * this.alphaPosition[i] - this.position[i]);
-            const X1 = this.alphaPosition[i] - A1 * Dalpha;
-
-            const A2 = 2 * a * Math.random() - a;
-            const C2 = 2 * Math.random();
-            const Dbeta = Math.abs(C2 * this.betaPosition[i] - this.position[i]);
-            const X2 = this.betaPosition[i] - A2 * Dbeta;
-
-            const A3 = 2 * a * Math.random() - a;
-            const C3 = 2 * Math.random();
-            const Ddelta = Math.abs(C3 * this.deltaPosition[i] - this.position[i]);
-            const X3 = this.deltaPosition[i] - A3 * Ddelta;
-
-            this.velocity[i] = (X1 + X2 + X3) / 3;
-        }
-    }
-}
-
-class GWO {
-    constructor(nParticles, nDimensi) {
-        this.nParticles = nParticles;
-        this.particles = [];
-        this.nDimensi = nDimensi;
-        this.alphaFitness = -Infinity;
-        this.alphaPosition = Array(nDimensi).fill(0);
-        this.initParticles();
-    }
-
-    initParticles() {
-        for (let i = 0; i < this.nParticles; i++) {
-            const particle = new GreyWolf(this.nDimensi, performanceFunction);
-            particle.inisialisasiPosisi(0, this.nDimensi - 1);
-            this.particles.push(particle);
-        }
-    }
-
-    evaluateFitness() {
-        this.particles.forEach((particle) => {
-            particle.calculateFitness();
-        });
-    }
-
-    updatePosition() {
-        this.particles.forEach((particle) => {
-            particle.updatePosition();
-        });
     }
 
     updateAlphaBetaDelta() {
-        this.particles.forEach((particle) => {
-            particle.updateAlphaBetaDelta();
-        });
+        // Reset alpha, beta, and delta fitness for this iteration
+        this.alphaFitness = Infinity;
+        this.betaFitness = Infinity;
+        this.deltaFitness = Infinity;
 
-        this.particles.forEach((particle) => {
-            if (particle.alphaFitness > this.alphaFitness) {
-                this.alphaFitness = particle.alphaFitness;
-                this.alphaPosition = [...particle.alphaPosition];
+        for (let i = 0; i < this.populationSize; i++) {
+            const currentFitness = this.fitness[i];
+            if (currentFitness < this.alphaFitness) {
+                // Shift beta and delta down
+                this.deltaFitness = this.betaFitness;
+                this.deltaPosition = [...this.betaPosition];
+                this.betaFitness = this.alphaFitness;
+                this.betaPosition = [...this.alphaPosition];
+                // Update alpha
+                this.alphaFitness = currentFitness;
+                this.alphaPosition = [...this.positions[i]];
+            } else if (currentFitness < this.betaFitness) {
+                // Shift delta down
+                this.deltaFitness = this.betaFitness;
+                this.deltaPosition = [...this.betaPosition];
+                // Update beta
+                this.betaFitness = currentFitness;
+                this.betaPosition = [...this.positions[i]];
+            } else if (currentFitness < this.deltaFitness) {
+                // Update delta
+                this.deltaFitness = currentFitness;
+                this.deltaPosition = [...this.positions[i]];
             }
-        });
+        }
     }
 
-    mainGWO(a) {
-        this.evaluateFitness();
-        this.updateAlphaBetaDelta();
-        this.updatePosition();
-        this.particles.forEach((particle) => {
-            particle.updateVelocity(a);
-        });
+    updatePosition(i, iter) {
+        const position = this.positions[i];
+        let newPosition = [...position]; // Copy the current position
+
+        for (let j = 0; j < this.numCities; j++) {
+            const a = 2 - (2 * iter) / this.maxIterations;
+            const r1 = Math.random();
+            const r2 = Math.random();
+            const A1 = 2 * a * r1 - a;
+            const C1 = 2 * r2;
+
+            const D_alpha = Math.abs(C1 * this.alphaPosition[j] - newPosition[j]);
+            const X1 = this.alphaPosition[j] - A1 * D_alpha;
+
+            const r3 = Math.random();
+            const r4 = Math.random();
+            const A2 = 2 * a * r3 - a;
+            const C2 = 2 * r4;
+
+            const D_beta = Math.abs(C2 * this.betaPosition[j] - newPosition[j]);
+            const X2 = this.betaPosition[j] - A2 * D_beta;
+
+            const r5 = Math.random();
+            const r6 = Math.random();
+            const A3 = 2 * a * r5 - a;
+            const C3 = 2 * r6;
+
+            const D_delta = Math.abs(C3 * this.deltaPosition[j] - newPosition[j]);
+            const X3 = this.deltaPosition[j] - A3 * D_delta;
+
+            newPosition[j] = Math.floor((X1 + X2 + X3) / 3) % this.numCities;
+        }
+
+        // Ensure position is valid (non-repeating cities)
+        newPosition = Array.from(new Set(newPosition));
+        while (newPosition.length < this.numCities) {
+            const missingCities = [...Array(this.numCities).keys()].filter(
+                (x) => !newPosition.includes(x)
+            );
+            newPosition.push(missingCities.pop());
+        }
+
+        // Compare fitness and accept only the better solution
+        const newFitness = this.fitnessFunction(newPosition);
+        if (newFitness < this.fitness[i]) {
+            this.positions[i] = newPosition;
+            this.fitness[i] = newFitness;
+        }
+    }
+
+    optimize(iter) {
+        for (let i = 0; i < this.populationSize; i++) {
+            this.updatePosition(i, iter);
+        }
     }
 }
-
-export { GWO };
