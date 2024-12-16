@@ -19,15 +19,13 @@ export class GWO {
         this.positions = [];
         this.fitness = [];
 
-        // Create population with non-repeating cities
         for (let i = 0; i < this.populationSize; i++) {
-            let position = [this.startCityIndex]; // Ensure the start city is the first city in the position
-            let availableCities = [...Array(this.numCities).keys()].filter(city => city !== this.startCityIndex); // Exclude the start city
+            let position = [this.startCityIndex];
+            let availableCities = [...Array(this.numCities).keys()].filter(city => city !== this.startCityIndex);
 
-            // Select cities randomly without repetition, but exclude the start city
             for (let j = 0; j < this.numCities - 1; j++) {
                 const randomIndex = Math.floor(Math.random() * availableCities.length);
-                const selectedCity = availableCities.splice(randomIndex, 1)[0]; // Remove selected city from the list
+                const selectedCity = availableCities.splice(randomIndex, 1)[0];
                 position.push(selectedCity);
             }
 
@@ -37,7 +35,6 @@ export class GWO {
     }
 
     updateAlphaBetaDelta() {
-        // Reset alpha, beta, and delta fitness for this iteration
         this.alphaFitness = Infinity;
         this.betaFitness = Infinity;
         this.deltaFitness = Infinity;
@@ -70,16 +67,16 @@ export class GWO {
 
     updatePosition(i, iter) {
         const position = this.positions[i];
-        let newPosition = [...position]; // Copy the current position
+        let newPosition = [this.startCityIndex];
 
-        for (let j = 0; j < this.numCities; j++) {
+        for (let j = 1; j < this.numCities; j++) {
             const a = 2 - (2 * iter) / this.maxIterations;
             const r1 = Math.random();
             const r2 = Math.random();
             const A1 = 2 * a * r1 - a;
             const C1 = 2 * r2;
 
-            const D_alpha = Math.abs(C1 * this.alphaPosition[j] - newPosition[j]);
+            const D_alpha = Math.abs(C1 * this.alphaPosition[j] - position[j]);
             const X1 = this.alphaPosition[j] - A1 * D_alpha;
 
             const r3 = Math.random();
@@ -87,7 +84,7 @@ export class GWO {
             const A2 = 2 * a * r3 - a;
             const C2 = 2 * r4;
 
-            const D_beta = Math.abs(C2 * this.betaPosition[j] - newPosition[j]);
+            const D_beta = Math.abs(C2 * this.betaPosition[j] - position[j]);
             const X2 = this.betaPosition[j] - A2 * D_beta;
 
             const r5 = Math.random();
@@ -95,13 +92,12 @@ export class GWO {
             const A3 = 2 * a * r5 - a;
             const C3 = 2 * r6;
 
-            const D_delta = Math.abs(C3 * this.deltaPosition[j] - newPosition[j]);
+            const D_delta = Math.abs(C3 * this.deltaPosition[j] - position[j]);
             const X3 = this.deltaPosition[j] - A3 * D_delta;
 
-            newPosition[j] = Math.floor((X1 + X2 + X3) / 3) % this.numCities;
+            newPosition.push(Math.floor((X1 + X2 + X3) / 3) % this.numCities);
         }
 
-        // Ensure position is valid (non-repeating cities)
         newPosition = Array.from(new Set(newPosition));
         while (newPosition.length < this.numCities) {
             const missingCities = [...Array(this.numCities).keys()].filter(
@@ -110,7 +106,6 @@ export class GWO {
             newPosition.push(missingCities.pop());
         }
 
-        // Compare fitness and accept only the better solution
         const newFitness = this.fitnessFunction(newPosition);
         if (newFitness < this.fitness[i]) {
             this.positions[i] = newPosition;
